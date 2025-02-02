@@ -1,2 +1,2 @@
-# 🛁 www.tubsproject.org
-www.tubsproject.org
+# 🛁 tubsproject.org
+tubsproject.org
