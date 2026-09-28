@@ -11,9 +11,45 @@
       the <a href="https://unhosted.org">Unhosted Project</a>,
       <a href="https://federatedbookkeeping.org">Federated Bookkeeping</a>,
       and <a href="https://pondersource.com">Ponder Source</a>.
-      More info coming soon.
       <a href="https://github.com/tubsproject">GitHub</a>
     </div>
+    <h2>Multi-homed data</h2>
+    <p>
+      Your bookkeeping data already lives in many places: your bank, your invoicing
+      tool, your time tracker, your accountant's package. TUBS does not ask you to
+      move it all into one new system. Instead, a record can live in several systems
+      at once, and the copies are kept in step. Three building blocks do this:
+    </p>
+    <ul>
+      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/syncables">syncables</a>
+        reads each platform's API, driven by its OpenAPI description.</li>
+      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/devonian">Devonian</a>
+        translates each platform's records to a shared model and back, using lenses.</li>
+      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/reflector">Reflector</a>
+        is the sync engine that keeps the copies in step.</li>
+    </ul>
+    <h2>Computed cells</h2>
+    <p>
+      Like a spreadsheet, some values are formulas over other values: an invoice
+      total, an account balance, the VAT for a quarter. The design principle is
+      <em>store the formula, not the value</em>. When copies from different systems
+      are merged, a stored total can silently go stale; a formula is recomputed from
+      the merged data.
+    </p>
+    <p>
+      The same idea covers the rules of bookkeeping. An invariant, such as "the
+      balance equals the sum of the transactions", is a computed cell that must be
+      true. If a merge breaks one, it shows up as something to review and fix,
+      instead of as silent corruption.
+    </p>
+    <h2>Commit messages</h2>
+    <p>
+      Like a Git repository, TUBS keeps not only the current state but also its
+      history, with a message for every change saying why it was made: "marked
+      invoice 2026-041 as paid, matched to bank line 3812". Changes proposed by
+      people, by apps and by AI agents are recorded the same way. They can be
+      reviewed before they are applied, and traced back afterwards.
+    </p>
     <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
     <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
     <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
