@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="TUBS explores typed, versioned and type-versioned data across hosts, protocols and agents, with multi-homed storage and explicit guarantees for messaging and computation.">
+    <meta name="description" content="TUBS explores typed data, versioned together with its schemas, across hosts, protocols and agents. SyncD keeps a local, versioned archive of API data.">
     <title>The Ultimate Bookkeeping System</title>
     <style>
       body { max-width: 64rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6; }
@@ -36,7 +36,7 @@
     </p>
     <h2>The vision</h2>
     <p>
-      <strong>Typed, versioned and type-versioned data, across hosts, protocols and agents.</strong>
+      <strong>Typed data, versioned together with its schemas, across hosts, protocols and agents.</strong>
       TUBS starts with bookkeeping and explores a broader foundation for software:
       durable data, messages and computation that can move between independently
       operated services. People should be able to change an app, a storage provider
@@ -59,9 +59,10 @@
       <li><strong>Versioned data</strong> gives changes identifiable revisions and
         retains history under an explicit retention policy, so a result can be
         traced to the inputs and decisions behind it.</li>
-      <li><strong>Type-versioned data</strong> identifies the exact version of its
-        type. Schemas evolve too: mappings and migrations describe how to translate
-        between versions, and readers can recognize versions they do not understand.</li>
+      <li><strong>Versioned schemas</strong> give types their own history, and each
+        record identifies the exact schema version it follows. Mappings and
+        migrations describe how to translate between versions, and readers can
+        recognize versions they do not understand.</li>
     </ul>
     <p>
       Messages, tasks and results carry these identities and versions across
@@ -112,7 +113,7 @@
         Ontola plans to offer integration-proxy as a SaaS product. The proxy handles
         connections; Syncables still builds the local data copy.</li>
       <li><strong>Store the data as Atomic Data.</strong>
-        In the standalone Syncables daemon, imported records are represented as
+        In SyncD, the standalone Syncables daemon, imported records are represented as
         <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Atomic Data</a>
         resources in JSON-AD, with stable subjects, source identities and bundled
         class and property definitions. Original source JSON is retained alongside
@@ -120,6 +121,24 @@
         history, so data and its accompanying schema resources can be read at a
         specific revision.</li>
     </ol>
+    <h2>SyncD: a local, versioned archive</h2>
+    <p>
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">SyncD</a>
+      is the standalone Syncables daemon. It uses the generic API client to read
+      configured collections and keep a local, versioned archive of data from
+      APIs. Successive reads create snapshots, preserving earlier records and
+      their accompanying schema resources as the source changes. You can browse
+      the archived data offline and inspect a particular revision rather than
+      relying only on what a service returns today.
+    </p>
+    <p>
+      PostgreSQL holds the archive and its history; working folders expose the
+      local data, and optional Git exports make collection or item histories
+      available to repository tools. SyncD retains source JSON alongside the
+      Atomic Data representation. The current standalone daemon reads and
+      archives provider data; sending local edits back is supported separately
+      by the Syncables library where the API and its description allow it.
+    </p>
     <h2>Atomic Lenses: tubing between tubs</h2>
     <p>
       <a href="https://github.com/ontola/atomic-plugins/tree/main/devonian">Atomic Lenses
