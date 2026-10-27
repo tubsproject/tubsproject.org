@@ -2,28 +2,82 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="TUBS explores typed, versioned and type-versioned data across hosts, protocols and agents, with multi-homed storage and explicit guarantees for messaging and computation.">
     <title>The Ultimate Bookkeeping System</title>
+    <style>
+      body { max-width: 64rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6; }
+      h1, h2 { line-height: 1.25; }
+      h2 { margin-top: 2rem; }
+      li { margin-bottom: .6rem; }
+      figure { margin: 1.5rem 0; }
+      figure img { display: block; width: 100%; height: auto; border-radius: 1rem; }
+      figcaption { margin-top: .5rem; }
+    </style>
   </head>
   <body style="background-color:lightblue">
     <h1>🛁 🛁 🛁 The Ultimate Bookkeeping System (TUBS) 🛁 🛁 🛁</h1>
     <div>
-      This <a href="https://nlnet.nl/project/TUBS/">NLNet sponsored</a> project by <a href="https://michielbdejong.com">Michiel de Jong</a> is a culmination of
+      This project by <a href="https://michielbdejong.com">Michiel de Jong</a> builds on
       the <a href="https://unhosted.org">Unhosted Project</a>,
       <a href="https://federatedbookkeeping.org">Federated Bookkeeping</a>,
       and <a href="https://pondersource.com">Ponder Source</a>.
       <a href="https://github.com/tubsproject">GitHub</a>
     </div>
     <p>
+      Previously funded by <a href="https://nlnet.nl/project/TUBS/">NLNet</a>,
+      TUBS has been funded by <a href="https://ontola.io/">Ontola</a> since September 2026.
+    </p>
+    <p>
       <a href="https://nlnet.nl/">
-        <img src="https://nlnet.nl/logo/banner.svg" alt="NLnet foundation" width="160" height="61">
+        <img src="https://nlnet.nl/logo/banner.svg" alt="NLnet foundation, previous funder" width="160" height="61">
       </a>
+    </p>
+    <h2>The vision</h2>
+    <p>
+      <strong>Typed, versioned and type-versioned data, across hosts, protocols and agents.</strong>
+      TUBS starts with bookkeeping and explores a broader foundation for software:
+      durable data, messages and computation that can move between independently
+      operated services. People should be able to change an app, a storage provider
+      or a worker while preserving their data and ongoing work.
+    </p>
+    <figure>
+      <img src="assets/multi-homed-bathtubs.png" width="1672" height="941"
+        alt="Four bathtubs on separate platforms representing a personal server, a data center, a laptop and cloud storage. Each holds matching record tiles, with copies traveling through transparent connecting tubes."
+        fetchpriority="high">
+      <figcaption>The same records, with several homes. Each tub represents an independent host; the tubing connects their copies.</figcaption>
+    </figure>
+    <p>
+      This is a direction for research and implementation. The components below
+      are building blocks toward it; the full set of guarantees is still being developed.
+    </p>
+    <h2>Types and versions</h2>
+    <ul>
+      <li><strong>Typed data</strong> declares what a record means and which schema
+        it follows, including details such as units and the meaning of its fields.</li>
+      <li><strong>Versioned data</strong> gives changes identifiable revisions and
+        retains history under an explicit retention policy, so a result can be
+        traced to the inputs and decisions behind it.</li>
+      <li><strong>Type-versioned data</strong> identifies the exact version of its
+        type. Schemas evolve too: mappings and migrations describe how to translate
+        between versions, and readers can recognize versions they do not understand.</li>
+    </ul>
+    <p>
+      Messages, tasks and results carry these identities and versions across
+      systems. A worker can state which input versions it accepts, which protocol
+      or implementation version it uses, and which effects it is authorized to produce.
     </p>
     <h2>Multi-homed data</h2>
     <p>
       Your bookkeeping data already lives in many places: your bank, your invoicing
-      tool, your time tracker, your accountant's package. TUBS does not ask you to
-      move it all into one new system. Instead, a record can live in several systems
-      at once, and the copies are kept in step. Three building blocks do this:
+      tool, your time tracker, your accountant's package. A record should be able
+      to live in several systems at once, with explicit rules for reconciling changes.
+      You could keep a local copy, use a personal data store and maintain backups
+      with other providers. An unhosted app can run in your browser and connect to
+      the stores you choose. Its operator need not hold your application data.
+    </p>
+    <p>
+      Existing work toward connecting bookkeeping systems includes three building blocks:
     </p>
     <ul>
       <li><a href="https://github.com/ontola/atomic-plugins/tree/main/syncables">syncables</a>
@@ -33,38 +87,87 @@
       <li><a href="https://github.com/ontola/atomic-plugins/tree/main/reflector">Reflector</a>
         is the sync engine that keeps the copies in step.</li>
     </ul>
+    <h2>Storage, messaging and workers</h2>
+    <p>
+      Applications need to know which guarantees each component provides, who
+      enforces them and under which failure assumptions. These contracts let a
+      workflow choose suitable components across different hosts and protocols.
+    </p>
+    <ul>
+      <li><strong>Storage</strong> declares when an acknowledged write is persistent,
+        which updates are atomic, how replicas and merges work, and which history
+        and change explanations are retained.</li>
+      <li><strong>Messaging</strong> declares whether outgoing messages are stored
+        durably and retried, what a delivery acknowledgement means, and whether
+        ordering, replay and duplicate handling are provided for a named stream.</li>
+      <li><strong>Validation</strong> makes signature checks, authorization, schema
+        checks and application rules explicit. Signature verification establishes
+        which key signed the data; identity, permission to act and the validity of
+        a financial transition require their own checks.</li>
+      <li><strong>Sync</strong> declares how changes are discovered, checked and
+        reconciled. CRDT merge rules can make replicas converge; financial consent
+        and protection against double spending require additional protocol rules.</li>
+      <li><strong>Workers</strong> declare whether a task can safely be repeated,
+        whether concurrent workers can contribute, or whether one worker has
+        exclusive authority. Exclusive execution requires fencing at the point
+        where effects are accepted, so an old worker cannot keep writing after
+        losing authority.</li>
+    </ul>
+    <p>
+      A Solid Pod with an appropriately configured inbox could receive messages
+      while its owner is offline. Their browser or a separately hosted personal
+      worker could process them later. Atomic sync could provide another route
+      for exchanging changes. A successful inbox delivery establishes receipt by
+      that store; the application protocol determines when a participant has agreed
+      to a transaction. These are possible integrations to explore.
+    </p>
+    <p>
+      Together, these pieces suggest a kind of world computer assembled from
+      independent stores, messaging services and workers. Each workflow chooses
+      the consistency and trust guarantees it needs. People, deterministic programs
+      and AI agents can participate through the same typed, versioned interfaces,
+      with their authority explicitly bounded.
+    </p>
     <h2>Computed cells</h2>
     <p>
       Like a spreadsheet, some values are formulas over other values: an invoice
-      total, an account balance, the VAT for a quarter. The design principle is
-      <em>store the formula, not the value</em>. When copies from different systems
+      total, an account balance, the VAT for a quarter. The design principle is to
+      <em>retain the formula and its inputs</em>, with cached results where useful.
+      When copies from different systems
       are merged, a stored total can silently go stale; a formula is recomputed from
       the merged data.
     </p>
     <p>
       The same idea covers the rules of bookkeeping. An invariant, such as "the
       balance equals the sum of the transactions", is a computed cell that must be
-      true. If a merge breaks one, it shows up as something to review and fix,
-      instead of as silent corruption.
+      true. TUBS aims to make violations visible for review. Rules that must hold
+      before an action takes effect, such as spending limits, also need enforcement
+      in the transaction protocol.
     </p>
     <h2>Commit messages</h2>
     <p>
-      Like a Git repository, TUBS keeps not only the current state but also its
-      history, with a message for every change saying why it was made: "marked
+      Like a Git repository, the aim is to retain state and its history, with a
+      message explaining each change: "marked
       invoice 2026-041 as paid, matched to bank line 3812". Changes proposed by
-      people, by apps and by AI agents are recorded the same way. They can be
-      reviewed before they are applied, and traced back afterwards.
+      people, apps and AI agents should record their author, relevant input and
+      type versions, and intent. This supports review before application and
+      tracing afterwards, according to the workflow's authorization and retention rules.
     </p>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁</div>
-    <div>🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 🛁 </div>
+    <h2>Personal control and bounded authority</h2>
+    <p>
+      The purpose is to increase people's agency over their software and records.
+      Workers should receive only the permissions needed for a task, with bounded
+      delegation. Automation should be inspectable, and people should be able to
+      stop future actions and withdraw authority. Completed actions and copies
+      already distributed may remain irreversible.
+    </p>
+    <p>
+      Open formats, portable identities and documented protocols should make it
+      possible to move data and pending work between providers. Participation
+      should allow independent operators and identities. As the architecture grows,
+      we ask whose agency a feature increases, what authority it creates, and how
+      that authority can be withdrawn.
+    </p>
+    <footer aria-label="TUBS">🛁 🛁 🛁</footer>
   </body>
 </html>
