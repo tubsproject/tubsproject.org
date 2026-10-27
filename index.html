@@ -76,17 +76,73 @@
       with other providers. An unhosted app can run in your browser and connect to
       the stores you choose. Its operator need not hold your application data.
     </p>
+    <h2>From APIs to Atomic Data</h2>
     <p>
-      Existing work toward connecting bookkeeping systems includes three building blocks:
+      Existing and ongoing work makes data behind an API available as a local copy,
+      using reusable descriptions of how each service works:
     </p>
-    <ul>
-      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/syncables">syncables</a>
-        reads each platform's API, driven by its OpenAPI description.</li>
-      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/devonian">Devonian</a>
-        translates each platform's records to a shared model and back, using lenses.</li>
-      <li><a href="https://github.com/ontola/atomic-plugins/tree/main/reflector">Reflector</a>
-        is the sync engine that keeps the copies in step.</li>
-    </ul>
+    <ol>
+      <li><strong>Describe the API.</strong>
+        Ontola's <a href="https://github.com/ontola/openapi-directory">openapi-directory</a>,
+        forked from <a href="https://github.com/APIs-guru/openapi-directory">APIs.guru's directory</a>,
+        collects machine-readable API descriptions. Ongoing work adds and updates
+        descriptions of industry APIs, checks official sources and preserves curation.</li>
+      <li><strong>Describe its behavior.</strong>
+        Our <a href="https://github.com/ontola/atomic-plugins/tree/main/openapi-extensions">openapi-extensions</a>
+        define metadata for behavior such as pagination, record identities and the
+        effects of create, read, update and delete operations. Further extensions
+        address concerns such as rate limits, deletion detection and write preconditions.</li>
+      <li><strong>Apply that knowledge through overlays.</strong>
+        The <a href="https://github.com/ontola/atomic-plugins/tree/main/overlays">overlays</a>
+        use these extensions to enrich existing OpenAPI descriptions without
+        editing the original documents. Versioned catalogs pair API descriptions
+        with matching overlays, giving clients a composed description to interpret.</li>
+      <li><strong>Create a local copy.</strong>
+        <a href="https://github.com/ontola/atomic-plugins/tree/main/syncables">Syncables</a>
+        acts as a generic API client: it interprets the composed description,
+        discovers collections and follows their pagination to assemble a local
+        copy of data held behind the API. Applications can work with that copy
+        while offline and, where supported, queue edits to send back. Coverage
+        depends on the API behavior described and the features the client implements.</li>
+      <li><strong>Optionally connect through a proxy.</strong>
+        Syncables can access APIs directly or use
+        <a href="https://github.com/ontola/atomic-plugins/tree/main/integration-proxy">integration-proxy</a>
+        to manage OAuth grants and API credentials and forward authorized requests.
+        Ontola plans to offer integration-proxy as a SaaS product. The proxy handles
+        connections; Syncables still builds the local data copy.</li>
+      <li><strong>Store the data as Atomic Data.</strong>
+        In the standalone Syncables daemon, imported records are represented as
+        <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Atomic Data</a>
+        resources in JSON-AD, with stable subjects, source identities and bundled
+        class and property definitions. Original source JSON is retained alongside
+        that representation. PostgreSQL stores the local records and their snapshot
+        history, so data and its accompanying schema resources can be read at a
+        specific revision.</li>
+    </ol>
+    <h2>Atomic Lenses: tubing between tubs</h2>
+    <p>
+      <a href="https://github.com/ontola/atomic-plugins/tree/main/devonian">Atomic Lenses
+      (also known as Devonian)</a> will help set up the tubing between tubs that
+      use a given Atomic schema. A lens describes how a platform's records map
+      to that schema's classes and properties, and how supported changes map back.
+      Identity mappings keep track of which records in different systems correspond.
+    </p>
+    <p>
+      For example, two bookkeeping services may represent an invoice differently.
+      With a lens from each service to the same Atomic invoice schema, applications
+      can work with a shared representation, and a sync workflow can translate
+      changes into the other service's format. Each service can have its own mapping
+      to the schema, reducing the need for a separate integration for every pair
+      of services. Lens mappings can preserve source fields that the shared view
+      does not expose.
+    </p>
+    <p>
+      This is ongoing work: lenses supply the mappings, while the surrounding
+      workflow supplies permissions, scheduling and conflict handling.
+      <a href="https://github.com/ontola/atomic-plugins/tree/main/reflector">Reflector</a>
+      is the sync engine for keeping copies in step. Together, these projects
+      connect existing services to the broader multi-homed data vision.
+    </p>
     <h2>Storage, messaging and workers</h2>
     <p>
       Applications need to know which guarantees each component provides, who
