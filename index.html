@@ -69,7 +69,7 @@
       systems. A worker can state which input versions it accepts, which protocol
       or implementation version it uses, and which effects it is authorized to produce.
     </p>
-    <h2>Multi-homed data</h2>
+    <h2 id="multi-homed-data">Multi-homed data</h2>
     <p>
       Your bookkeeping data already lives in many places: your bank, your invoicing
       tool, your time tracker, your accountant's package. A record should be able
@@ -138,6 +138,17 @@
       Atomic Data representation. The current standalone daemon reads and
       archives provider data; sending local edits back is supported separately
       by the Syncables library where the API and its description allow it.
+    </p>
+    <h2>A personal system of record</h2>
+    <p>
+      Applied to one person or household, multi-homed data becomes a
+      <a href="personal-system-of-record.html">personal system of record</a>:
+      the place where your own data, its history and the reasons for each
+      change are authoritative for you. Files stay with the storage providers
+      you already use, whose sync engines keep handling capture and
+      replication. SyncD adds a single index over them, with one log of
+      changes. The design notes describe the principles, the role of storage
+      providers, how to set one up with SyncD, and what is still open.
     </p>
     <h2>Atomic Lenses: tubing between tubs</h2>
     <p>
