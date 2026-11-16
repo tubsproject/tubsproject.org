@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Design notes for a personal system of record: permanent content, one log with commit messages, a single index over several storage providers, and SyncD as the indexer.">
+    <title>Personal system of record | TUBS</title>
+    <style>
+      body { max-width: 64rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6; }
+      h1, h2, h3 { line-height: 1.25; }
+      h2 { margin-top: 2rem; }
+      h3 { margin-top: 1.5rem; }
+      li { margin-bottom: .6rem; }
+      table { border-collapse: collapse; width: 100%; margin: 1rem 0; }
+      th, td { border: 1px solid #5a7d8c; padding: .4rem .6rem; text-align: left; vertical-align: top; }
+      th { background-color: rgba(255, 255, 255, .45); }
+      pre { background-color: rgba(255, 255, 255, .55); padding: .8rem 1rem; border-radius: .5rem; overflow-x: auto; }
+      code { font-family: ui-monospace, monospace; font-size: .95em; }
+      dt { font-weight: bold; margin-top: 1rem; }
+      dd { margin-left: 0; }
+    </style>
+  </head>
+  <body style="background-color:lightblue">
+    <p><a href="./">🛁 The Ultimate Bookkeeping System (TUBS)</a></p>
+    <h1>Personal system of record</h1>
+    <p>
+      <em>Design notes, November 2026. This is a design in progress. The
+      <a href="#status">status table</a> says what exists, what is proposed and
+      what is undecided.</em>
+    </p>
+
+    <h2>What it is</h2>
+    <p>
+      A personal system of record is the place where a person's own data is
+      authoritative for them: bookkeeping, issues, messages, notes, photos and
+      documents, together with the history of how each item changed and why.
+    </p>
+    <p>
+      It differs from a personal data store or pod in what the term names. A
+      store or pod is a place that holds data for applications. A system of
+      record is a role: it is where the authoritative version, its history and
+      its provenance are kept. A pod or personal data server can be one of the
+      storage backends that a personal system of record indexes.
+    </p>
+    <p>
+      Authority here is personal, not global. A bank's ledger is authoritative
+      for the bank, and your record of the same transaction is authoritative
+      for you. This is the <a href="./#multi-homed-data">multi-homed data</a>
+      that TUBS describes. Messaging and schema translation reconcile the copies.
+    </p>
+
+    <h2>Principles</h2>
+    <ol>
+      <li><strong>Original bytes are permanent; interpretation is rebuildable.</strong>
+        Files and raw API responses are kept exactly as received. Records,
+        schemas mapped onto them, and indexes are derived and can be regenerated.</li>
+      <li><strong>Identity is content, never location.</strong>
+        Content is named by a hash of its bytes. Where it is stored is recorded
+        separately and can change without changing any identity.</li>
+      <li><strong>Indexes and views are disposable.</strong>
+        Any folder layout, database or application view can be deleted and
+        rebuilt from the content and the log.</li>
+      <li><strong>One log, with commit messages.</strong>
+        Every change to data or to schemas is an entry with a free-form message
+        saying what happened and why. There is one layer of messages, not one per tool.</li>
+      <li><strong>Files stay where they are.</strong>
+        Existing folders on existing storage are indexed in place. Nothing has
+        to be moved or renamed before the system is useful.</li>
+      <li><strong>Existing sync engines are used, not replaced.</strong>
+        Storage providers already move bytes between devices and the cloud.
+        The system of record adds an index and a history on top of them.</li>
+      <li><strong>Signatures, identity and sharing sit above the core.</strong>
+        The core needs hashes, a log and an opaque author label. A
+        counterparty's signature is stored as part of the message it arrived in.</li>
+      <li><strong>No marriage to one tool.</strong>
+        The durable formats are simple enough to re-implement a reader from the bytes alone.</li>
+    </ol>
+
+    <h2>Layers</h2>
+    <table>
+      <thead>
+        <tr><th>Layer</th><th>Contents</th><th>Durability</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Content</td><td>Files and raw API responses, named by hash</td><td>Permanent</td></tr>
+        <tr><td>Log</td><td>Append-only chain of entries: previous entry, content references, message</td><td>Permanent</td></tr>
+        <tr><td>Definitions</td><td>Schemas, translations between schemas, index definitions</td><td>Authored and versioned in the log</td></tr>
+        <tr><td>Working index</td><td>Records, lookups, and where each piece of content is stored</td><td>Rebuildable</td></tr>
+        <tr><td>Views</td><td>Folders, applications, generated interfaces</td><td>Disposable</td></tr>
+      </tbody>
+    </table>
+    <p>
+      Definitions are not disposable. A translation between two schemas encodes
+      judgement, and regenerating it may not give the same result. Output that
+      has left the system, such as a sent message or a filed return, is also
+      kept as content, since it is a fact about what was said.
+    </p>
+
+    <h2 id="storage-providers">Storage providers and their sync engines</h2>
+    <p>
+      Most people's files already sit with one or more storage providers, and
+      each provider ships a sync engine: a desktop client that mirrors a
+      folder, or a phone feature that uploads new photos. A personal system of
+      record builds on these. It does not need its own way of moving bytes
+      between a phone, a laptop and the cloud.
+    </p>
+
+    <h3>What a provider and its sync engine contribute</h3>
+    <ul>
+      <li><strong>Capture.</strong> Automatic photo upload gets new data off a
+        phone without any action by its owner. This is the hardest part to
+        replace, and there is no need to.</li>
+      <li><strong>Storage.</strong> The provider holds the bytes and can count
+        as one of the required copies.</li>
+      <li><strong>Replication.</strong> A synced folder carries files between
+        devices. It can also carry the system of record's own content and log
+        files to other machines.</li>
+      <li><strong>A temporary safety net.</strong> Where a provider keeps
+        earlier versions of a file for a period, a replaced or deleted version
+        can still be fetched during that period.</li>
+    </ul>
+
+    <h3>What they do not provide</h3>
+    <ul>
+      <li>History beyond the provider's retention period, or any record of why
+        something changed.</li>
+      <li>A view across providers: which files are the same, and which exist
+        in only one place.</li>
+      <li>Verification under your own control, independent of the provider's
+        account and client.</li>
+      <li>Immutability. Any connected device or application can change or
+        delete a synced file.</li>
+    </ul>
+    <p>The index and the log supply these.</p>
+
+    <h3>How each kind of storage is indexed</h3>
+    <p>
+      The index reads metadata only. File bytes are not downloaded unless a
+      policy asks for a local copy. The details below need checking against
+      each provider's current documentation before they are relied on.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Storage</th>
+          <th>How it is read</th>
+          <th>Content hash without downloading</th>
+          <th>Finding changes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Dropbox</td>
+          <td>HTTP API file listing</td>
+          <td>Yes: a hash built from SHA-256 over fixed-size blocks, plus a revision identifier per file</td>
+          <td>Listing cursor that reports changes and deletions</td>
+        </tr>
+        <tr>
+          <td>Google Drive</td>
+          <td>HTTP API file listing</td>
+          <td>Yes: checksums reported per file</td>
+          <td>Changes feed</td>
+        </tr>
+        <tr>
+          <td>iCloud Drive</td>
+          <td>Local macOS interfaces on a Mac signed in to the account</td>
+          <td>No: computed locally, which requires the file to be downloaded</td>
+          <td>Rescan, or local file change notifications</td>
+        </tr>
+        <tr>
+          <td>iCloud Photos</td>
+          <td>The local photo library interface on a Mac signed in to the account</td>
+          <td>No: computed locally</td>
+          <td>Rescan, or library change notifications</td>
+        </tr>
+        <tr>
+          <td>Local folders</td>
+          <td>File system scan</td>
+          <td>Computed locally</td>
+          <td>Rescan, comparing size and modification time first</td>
+        </tr>
+        <tr>
+          <td>Cold storage</td>
+          <td>The provider's inventory, or the upload record</td>
+          <td>Whatever checksum was recorded at upload</td>
+          <td>None needed when the storage is write-once</td>
+        </tr>
+      </tbody>
+    </table>
+    <p>
+      <strong>iCloud is the case without a web API.</strong> Apple does not
+      offer third parties a service API for listing a user's iCloud Drive or
+      photo library. On a Mac, however, the provider's own sync engine exposes
+      both through local interfaces: iCloud Drive as files in the file system,
+      and the photo library through the system's photo framework. An indexer
+      running on that Mac reads those, so the Mac's sync engine acts as the
+      adapter. The same local scan covers ordinary folders.
+    </p>
+    <p>
+      Providers report different hashes for the same bytes. The index therefore
+      keeps a set of hashes for each piece of content, and links two hashes
+      only after the same bytes have been hashed with both. Until then, the
+      same size and name on two providers is recorded as a probable match, not
+      as identity.
+    </p>
+
+    <h3>Locations, copies and verification</h3>
+    <ul>
+      <li><strong>Locations are observations.</strong> "This backend reported
+        this content at this path and revision, at this time" is recorded with
+        the date and the method of verification. A later scan that finds
+        something else is a new observation.</li>
+      <li><strong>Backends have properties:</strong> whether a copy there
+        counts, whether the backend is immutable, versioned or mutable, how
+        content is verified, and how quickly it can be retrieved.</li>
+      <li><strong>A required number of copies.</strong> The system reports
+        content with too few copies on backends that count, and whether
+        removing a copy is safe. A phone's cloud upload is the second copy of a
+        new photo until another backend has it.</li>
+      <li><strong>Detection and rescue.</strong> Mutable storage cannot be
+        made immutable from outside. Changes are detected by scanning, recorded
+        in the log, and the superseded version is fetched from the provider's
+        version history before it expires.</li>
+      <li><strong>The index is backed up to more than one backend.</strong>
+        If it is lost, files indexed in place are still usable under their
+        original paths.</li>
+    </ul>
+
+    <h3>Using a synced folder as transport</h3>
+    <p>
+      A provider's synced folder can replicate the system of record's own
+      files, which removes the need for a separate copy step. Sync engines are
+      built for ordinary documents, so a few rules apply:
+    </p>
+    <ul>
+      <li>Put only immutable files in the synced folder. Content named by its
+        hash and finished log entries qualify.</li>
+      <li>Write a file somewhere else on the same disk first, then move it in,
+        so the sync engine never sees a partial file.</li>
+      <li>Keep lock files, temporary files and databases out of the synced folder.</li>
+      <li>Let one machine write any file that is updated in place, such as the
+        pointer to the newest log entry. Two writers produce conflicted copies.</li>
+      <li>Bundle many small files into one archive file per day. Sync services
+        and cold storage both slow down or charge by the number of files.</li>
+      <li>Expect files that are stored online only. Verifying them by hash
+        means downloading them.</li>
+    </ul>
+
+    <h2 id="syncd">Setting one up with SyncD</h2>
+    <p>
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">SyncD</a>,
+      the standalone Syncables daemon, is the indexer. Today it covers data
+      behind APIs. File indexing across storage providers is proposed in
+      <a href="https://github.com/ontola/atomic-plugins/issues/727">atomic-plugins #727</a>.
+      SyncD is experimental and unreleased, and the
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">daemon guide</a>
+      has the exact commands. The outline is:
+    </p>
+    <ol>
+      <li><strong>Run it on a machine you control,</strong> with a local
+        PostgreSQL database that holds the archive and its history.</li>
+      <li><strong>Authorize each service.</strong> The daemon uses
+        <a href="https://github.com/ontola/atomic-plugins/tree/main/integration-proxy">integration-proxy</a>
+        for OAuth grants and device approval. Credentials are not written to
+        the configuration file or the database.</li>
+      <li><strong>Describe each collection</strong> in the configuration: the
+        service, the approved connection, the composed OpenAPI description
+        with its overlay, and how often to poll.</li>
+      <li><strong>Sync, and say why.</strong> Each successful read publishes a
+        revision with a commit message. Your own intent is recorded with it:
+        <pre><code>syncables sync --config config.json \
+  --message "First snapshot of my issue tracker"</code></pre></li>
+      <li><strong>Read from the views.</strong> Browse a collection or inspect
+        its history at a chosen revision. Each collection also appears as an
+        ordinary folder with one JSON file per record, and a history can be
+        exported to Git.</li>
+      <li><strong>Back up the database to two places.</strong> The original
+        API responses and the full revision history live only there.</li>
+      <li><strong>Add files.</strong> Until #727 is implemented, files can be
+        recorded with a small content-and-log tool: each file is stored or
+        referenced under its hash, and each batch gets a log entry with a message.</li>
+    </ol>
+    <p>
+      Current limits: the standalone daemon reads and archives but does not
+      send edits back, each read is capped in size and duration, nothing is
+      pruned automatically, and saved login sessions are supported on macOS only.
+    </p>
+
+    <h2>Structured data</h2>
+    <p>
+      For API data, SyncD keeps the original response text, a content-addressed
+      graph of the JSON, and snapshot revisions with commit messages. Schemas
+      are versioned in the same revisions as the data, as described in
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Versioned Atomic Data</a>.
+    </p>
+    <p>
+      Fine-grained hashes serve different purposes at each level: a value hash
+      identifies content wherever it appears, an atom hash identifies a
+      statement about a subject, and a record hash identifies the full state
+      of one resource. All of them can be computed from the same stored bytes,
+      so the choice of what to hash is separate from the choice of what to
+      store as a unit.
+    </p>
+
+    <h2>Writes</h2>
+    <p>
+      A write through a view is recorded first and interpreted afterwards. The
+      raw event, for example "the file at this path now has this hash", is kept
+      as a fact, and its meaning is derived and can be revised.
+    </p>
+    <p>
+      Free-form intent is preferred over fixed buttons. The user's own words
+      become the commit message, and the concrete operations that resulted are
+      recorded with it, because an interpretation by a language model is not
+      reproducible. Actions that leave the system and cannot be undone by
+      appending, such as sending a message or making a payment, show a preview first.
+    </p>
+
+    <h2>Integrity</h2>
+    <ul>
+      <li>Each log entry includes the hash of the previous one, so any change
+        to history is detectable.</li>
+      <li>A copy of the log head held outside the system detects a rollback.
+        A write-once offsite copy serves this purpose, and so does a
+        timestamping service. A provider that keeps version history for the
+        head pointer is an informal witness.</li>
+      <li>Signing checkpoints with a key kept elsewhere is optional and is
+        layered on top.</li>
+    </ul>
+
+    <h2>Messaging and translation</h2>
+    <p>Planned as the next stage.</p>
+    <ul>
+      <li>A received message is stored byte-exact, with its envelope, as content.</li>
+      <li>The result of verifying a signature is recorded as an observation at
+        the time of receipt, since keys expire and rotate.</li>
+      <li>Translations between schemas are stored, versioned definitions. The
+        original is always kept, because translation loses information in both directions.</li>
+      <li>Only the author supersedes a record. Others send a message proposing a change.</li>
+    </ul>
+
+    <h2 id="status">Status</h2>
+    <table>
+      <thead>
+        <tr><th>Item</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>SyncD: API sync into PostgreSQL with revisions and commit messages</td><td>Implemented, experimental</td></tr>
+        <tr><td>Content-and-log prototype for files (command-line script)</td><td>Prototype, not yet published</td></tr>
+        <tr><td>File index across storage providers in SyncD</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
+        <tr><td>Local scan source for macOS, covering iCloud</td><td>Proposed, part of #727</td></tr>
+        <tr><td>Local loose files with a daily archive file as transport</td><td>Planned experiment</td></tr>
+        <tr><td>Revisions with commit messages in Atomic Server</td><td>Under discussion</td></tr>
+        <tr><td>Which levels get a hash identity (value, atom, record)</td><td>Open</td></tr>
+        <tr><td>Messaging between systems of record</td><td>Planned</td></tr>
+        <tr><td>Schema translation in this setting</td><td>Planned</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Decision log</h2>
+    <dl>
+      <dt>2026-11-10: Content and log as the core</dt>
+      <dd>Whole files named by SHA-256, plus a hash-chained log of small
+        entries with free-form messages. Files are not split into chunks, so
+        the store stays readable with ordinary tools.</dd>
+
+      <dt>2026-11-10: Signatures out of the core</dt>
+      <dd>Hashes give integrity for a single writer. Signatures answer "who
+        said this", which belongs to messaging and sharing. Building one
+        identity scheme into the core would make it harder to evolve.</dd>
+
+      <dt>2026-11-10: Not built on Perkeep</dt>
+      <dd>Its blob and index layers match this design, but it requires signed
+        claims, has a fixed schema vocabulary and chunks large files.</dd>
+
+      <dt>2026-11-10: Custom pack files considered, then dropped</dt>
+      <dd>Packing many small JSON nodes into immutable files needs an index,
+        location hints and consolidation. Git already solves all of these.</dd>
+
+      <dt>2026-11-10: Git bundles considered, then dropped</dt>
+      <dd>Storing Git history inside the log would create two layers of commit
+        messages describing the same events.</dd>
+
+      <dt>2026-11-10: Aggregation is a transport concern</dt>
+      <dd>Per-file costs come from sync services and cold storage, not from the
+        local file system. Locally, loose hash-named files are enough. For
+        transport, new files are bundled into a standard archive file.</dd>
+
+      <dt>2026-11-10: Raw responses are the permanent unit for API data</dt>
+      <dd>A full export across many services could reach tens of millions of
+        JSON nodes, too many for one file each. Response pages number in the
+        tens of thousands. Nodes stay in a database as a working index.</dd>
+
+      <dt>2026-11-10: Databases are working stores</dt>
+      <dd>PostgreSQL, an embedded key-value store, or a document database can
+        each hold the index. None is the permanent record, and the choice can
+        change without changing any hash.</dd>
+
+      <dt>2026-11-11: SyncD stays on PostgreSQL for now</dt>
+      <dd>The reason to change its storage is a single store that also covers
+        files and photos. Until that exists there is no benefit.</dd>
+
+      <dt>2026-11-11: Existing folders are indexed in place</dt>
+      <dd>Reorganising large existing collections is unnecessary. Immutability
+        is replaced by detection and rescue.</dd>
+
+      <dt>2026-11-11: One index over several backends</dt>
+      <dd>Storage providers are treated as backends with stated properties.
+        SyncD is the indexer.</dd>
+
+      <dt>2026-11-13: A home server is optional</dt>
+      <dd>Below the common cloud storage tiers, a home server does not save
+        money, and the design does not depend on one. An independent second
+        copy matters more than where the first copy lives.</dd>
+
+      <dt>2026-11-16: Sync engines are used, not replaced</dt>
+      <dd>Providers' own clients keep handling capture and replication. For
+        iCloud, which has no web API for listing, the index reads the local
+        interfaces on a Mac.</dd>
+
+      <dt>2026-11-16: The name</dt>
+      <dd>"Personal system of record", shortened to "personal SoR" in running text.</dd>
+    </dl>
+    <footer aria-label="TUBS">🛁 🛁 🛁</footer>
+  </body>
+</html>
