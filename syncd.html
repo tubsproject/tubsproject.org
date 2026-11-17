@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="SyncD is the standalone Syncables daemon. It runs on your laptop, imports data from many platforms, and keeps the data, its schemas and their history with commit messages in a local database.">
+    <meta name="description" content="SyncD is the standalone Syncables daemon. It runs on your laptop, imports data from the platforms you use, and keeps the data, its schemas and their history with commit messages in a local database.">
     <title>SyncD | TUBS</title>
     <style>
       body { max-width: 64rem; margin: 2rem auto; padding: 0 1rem; font-family: system-ui, sans-serif; line-height: 1.6; }
@@ -23,9 +23,10 @@
     <h1>SyncD</h1>
     <p>
       SyncD is the standalone Syncables daemon. It runs on your own laptop,
-      imports data from the platforms you use, and keeps a local, versioned
-      archive of it. It is the indexer for a
-      <a href="personal-system-of-record.html">personal system of record</a>.
+      imports your data from the platforms you use, and keeps a local,
+      versioned archive of it: the records, the schemas that describe them,
+      and the history of both, with a commit message on every change. It is
+      the indexer for a <a href="personal-system-of-record.html">personal system of record</a>.
     </p>
     <p>
       <em>SyncD is experimental. It is the trailblazer project for the
@@ -37,160 +38,159 @@
 
     <h2>Where it runs</h2>
     <p>
-      On the user's laptop, as a foreground process started from the
-      <code>syncables</code> command. The archive, the collection settings and
-      the history stay on that device. There is no hosted SyncD service that
-      holds your data.
-    </p>
-    <p>
-      A laptop sleeps. SyncD catches up when it wakes, using each provider's
-      change feed where one exists.
+      On the user's laptop, as a process started from the <code>syncables</code>
+      command. The archive, the collection settings and the history stay on
+      that device. There is no hosted SyncD service that holds your data. A
+      laptop sleeps; SyncD catches up when it wakes.
     </p>
 
-    <h2>Connecting to platforms</h2>
+    <h2 id="platforms">Importing from platforms</h2>
     <p>
-      SyncD reaches most platforms through an instance of
+      Your issue tracker, notes, tasks, calendar, bookkeeping package and chat
+      each hold part of your record behind an API. SyncD does not need a
+      hand-written integration for each of them. It is a generic API client:
+      it reads a machine-readable description of a platform's API and works
+      out from that how to fetch every record in a collection.
+    </p>
+
+    <h3>How a platform becomes importable</h3>
+    <ol>
+      <li><strong>An API description.</strong> Most come from the
+        <a href="https://github.com/ontola/openapi-directory">OpenAPI directory</a>
+        or from the provider itself.</li>
+      <li><strong>A description of its behavior.</strong>
+        <a href="https://github.com/ontola/atomic-plugins/tree/main/openapi-extensions">OpenAPI extensions</a>
+        add what an API description usually leaves out: which operations list
+        a collection, how to reach the next page, what identifies a record,
+        how deletions show up, and what rate limits apply.</li>
+      <li><strong>An overlay</strong> attaches that behavior to the
+        provider's description without editing it. The
+        <a href="https://github.com/ontola/atomic-plugins/tree/main/overlays">overlays</a>
+        cover more than a hundred APIs.</li>
+      <li><strong>A dated catalog</strong> pairs each description with the
+        overlay revision to use, so a sync can say exactly which description
+        it followed.</li>
+    </ol>
+    <p>
+      The most recent catalog lists Airtable, Asana, Box, Clockify, Discord,
+      Dropbox, GitHub issues, GitLab, Google Calendar, Google Drive, Google
+      Keep, Google Tasks, Moneybird, Notion, Spotify and Todoist. How far each
+      has been tested against the live service varies; GitHub issues and Google
+      Keep are the reference examples in the daemon guide. Adding a platform is
+      mostly a matter of writing an overlay, not code.
+    </p>
+
+    <h3>Connecting through IAP</h3>
+    <p>
+      SyncD reaches platforms through an instance of
       <a href="https://github.com/ontola/atomic-plugins/tree/main/integration-proxy">integration-proxy</a>.
       Integrations Atomic Place (IAP), at <code>integrations.atomic.place</code>,
-      is one such instance. Any other deployment of integration-proxy works
-      the same way, including one you host yourself.
+      is one such instance. Any other deployment works the same way, including
+      one you host yourself.
     </p>
     <ul>
       <li><strong>The proxy holds the provider credentials and grants.</strong>
-        SyncD receives a device session approved by the owner, not the
-        provider's tokens.</li>
-      <li><strong>SyncD holds the data.</strong> Imported records and their
-        history are stored on the laptop, not in the proxy.</li>
-      <li><strong>Change hints while the laptop is asleep.</strong> The proxy
-        can receive a platform's webhooks and keep only a notification that
-        something changed, without storing the content. SyncD collects the
-        hints later and reads the changes itself.</li>
-      <li><strong>Grants can be reviewed and revoked</strong> from a local
-        control panel that SyncD serves on the laptop.</li>
+        You approve a device session for SyncD, and choose which connections
+        it may use. SyncD never receives the provider's tokens.</li>
+      <li><strong>SyncD holds the data.</strong> The proxy forwards requests;
+        imported records and their history are stored only on the laptop.</li>
+      <li><strong>Change hints while the laptop sleeps.</strong> The proxy can
+        receive a platform's webhooks and keep only the fact that something
+        changed, discarding the content. SyncD collects these hints later and
+        reads the changes itself.</li>
+      <li><strong>Grants stay under your control.</strong> A local control
+        panel lists connections, app delegations and sessions, and can revoke
+        any of them.</li>
     </ul>
-    <p>
-      Which platforms can be imported depends on the API descriptions and
-      overlays available for them. See
-      <a href="./#from-apis-to-atomic-data">From APIs to Atomic Data</a>.
-    </p>
+
+    <h3>What a sync does</h3>
+    <ul>
+      <li><strong>Reads the whole collection,</strong> following the declared
+        pagination page by page, not just the first page.</li>
+      <li><strong>Reads only what changed</strong> on later syncs, where the
+        API offers a change feed or other incremental read.</li>
+      <li><strong>Publishes all or nothing.</strong> A new revision appears
+        only after the complete read succeeds. If a read fails halfway, the
+        previous revision stays current.</li>
+      <li><strong>Keeps the evidence.</strong> Every response is stored as the
+        exact text the platform returned, so a record can always be traced to
+        what the API actually said.</li>
+    </ul>
 
     <h2>What it stores</h2>
     <p>By default, everything goes into a local PostgreSQL database:</p>
     <ul>
-      <li><strong>The synced data,</strong> as Atomic Data resources, with the
-        original API response text retained alongside.</li>
+      <li><strong>The records,</strong> as Atomic Data resources with stable
+        identifiers, and the original JSON kept alongside. Fields SyncD does
+        not understand are retained, and numbers keep their exact spelling.</li>
       <li><strong>The schemas,</strong> as class and property resources
-        versioned together with the data that uses them.</li>
-      <li><strong>The history,</strong> as revisions. Each successful sync
-        publishes one, and earlier revisions remain readable.</li>
+        versioned together with the data that uses them. Reading an old
+        revision interprets it with the schema as it was then.</li>
+      <li><strong>The history,</strong> as revisions. Earlier states remain
+        readable, including records that disappeared and came back.</li>
       <li><strong>Commit messages,</strong> on every revision, covering
-        changes to data and to schemas alike. A generated line says what was
-        synced and how, and your own stated intent is recorded with it.</li>
+        changes to data and schemas alike. SyncD writes what was synced and
+        how; you can add why:
+        <pre><code>syncables sync --config config.json \
+  --message "Snapshot before migrating to the new tracker"</code></pre></li>
     </ul>
+
+    <h2>Using the data</h2>
+    <ul>
+      <li><strong>Browse offline,</strong> from the command line or a local
+        browser interface, at the current revision or any earlier one.</li>
+      <li><strong>Plain folders:</strong> each collection can be checked out
+        as a folder with one JSON file per record.</li>
+      <li><strong>Git:</strong> the history of a collection or a single record
+        can be exported as a Git repository, with its messages and branches.</li>
+      <li><strong>Braid:</strong> an experimental read-only listener serves
+        snapshots over Braid-HTTP, so a client can subscribe and receive each
+        new revision as it is published.</li>
+      <li><strong>A native Atomic drive:</strong> an experimental projection
+        presents the synced collections as one Atomic drive, with a table per
+        collection and the schemas as native classes and properties. Atomic
+        clients and servers can replicate it.</li>
+    </ul>
+
+    <h2>Sending changes back</h2>
     <p>
-      The stored data can be browsed offline at any revision, from the command
-      line or a local browser interface. A collection can be checked out as a
-      folder of JSON files, and its history can be exported to Git.
+      Experimentally, SyncD can queue local creates, edits and deletes and
+      send them to the platform through an owner-approved session on the
+      proxy. It does so only for operations that the API description declares
+      precisely enough, and refuses the rest. Google Keep is the first
+      composed example. This has been tested against invented providers;
+      live writes are not yet verified. Editing a checked-out file never sends
+      a write by itself.
     </p>
 
     <h2 id="files">Files at storage providers</h2>
     <p>
-      SyncD can keep an inventory of the files you hold with storage
-      providers. It imports metadata only: names, paths or identifiers, sizes,
-      modification times, revisions and the checksums a provider reports. It
-      does not download or open file contents.
+      SyncD can also keep an inventory of the files you hold with Dropbox,
+      Google Drive and iCloud Drive. It records metadata only: names, paths,
+      sizes, revisions and the checksums a provider reports. Dropbox and
+      Google Drive are read through their APIs. iCloud Drive, which has no
+      listing API for third parties, is read from the folder that the Mac's
+      built-in sync client maintains, without opening or downloading files.
+      A duplicate report separates confirmed matches, with equal checksums,
+      from candidates that only share a name and size. See the
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/file-inventory.md">file inventory guide</a>.
     </p>
-    <table>
-      <thead>
-        <tr><th>Source</th><th>How it is read</th><th>Later syncs</th></tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Dropbox</td>
-          <td>The provider's API, with a read-only metadata grant</td>
-          <td>A cursor reports additions, changes and deletions</td>
-        </tr>
-        <tr>
-          <td>Google Drive</td>
-          <td>The provider's API, with a read-only metadata grant</td>
-          <td>The change feed</td>
-        </tr>
-        <tr>
-          <td>iCloud Drive</td>
-          <td>The iCloud Drive folder on a Mac: directory entries and file
-            attributes, including files that are stored online only</td>
-          <td>The folder is scanned again</td>
-        </tr>
-      </tbody>
-    </table>
     <p>
-      A duplicate report runs over the stored inventories. It separates
-      confirmed duplicates, where two files have the same checksum of the same
-      kind, from candidates, where files on different providers share a name
-      and size but their content has not been compared. The
-      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/file-inventory.md">file inventory guide</a>
-      covers setup.
-    </p>
-
-    <h2 id="sync-clients">Alongside the platform's own sync client</h2>
-    <p>
-      Most laptops already run sync clients. macOS has iCloud built in, and
-      most Dropbox users have a Dropbox folder. SyncD is meant to work next to
-      these, not to replace them. The sync client moves the bytes. SyncD
-      records what exists, where, and how it changed.
-    </p>
-
-    <h3>What works today</h3>
-    <ul>
-      <li><strong>iCloud Drive through the Mac.</strong> Apple offers no
-        listing API to third parties, so SyncD reads the folder that the
-        built-in sync client maintains. That client is the adapter.</li>
-      <li><strong>No downloads triggered by a scan.</strong> Files stored
-        online only appear as placeholders. SyncD lists them and reads their
-        attributes without opening them. For that reason the iCloud inventory
-        has no checksums.</li>
-      <li><strong>Dropbox and Google Drive through their APIs.</strong> This
-        gives the complete listing, including files that are not on the
-        laptop, with the provider's own checksums.</li>
-    </ul>
-
-    <h3>What is proposed</h3>
-    <p>
-      Where a provider has both an API and a local synced folder, the two
-      views can be joined. This is design, tracked in
+      SyncD works alongside the providers' own sync clients rather than
+      replacing them: the client moves the bytes, SyncD records what exists
+      and how it changes. Joining a provider's API view with its local synced
+      folder, to confirm copies by checksum, is proposed in
       <a href="https://github.com/ontola/atomic-plugins/issues/727">atomic-plugins #727</a>.
-    </p>
-    <ul>
-      <li><strong>Confirming the sync client's work.</strong> A provider's
-        checksum can be recomputed from a file that is present locally. If it
-        equals what the API reports, the file is verified to exist in both
-        places.</li>
-      <li><strong>Linking checksums.</strong> A file that is present locally
-        can also be hashed with a universal algorithm, which ties the
-        provider's checksum to one that other providers can be compared with.</li>
-      <li><strong>Writing through the synced folder.</strong> To place a copy
-        with a provider, SyncD can put a finished file into the synced folder
-        and let the client upload it, then confirm arrival through the API.</li>
-      <li><strong>Separate grants for reading and writing.</strong> Reading
-        metadata across an account and writing into one dedicated folder are
-        different authorities and should be approved separately.</li>
-      <li><strong>Backing up the archive.</strong> A regular export of the
-        database written into two providers' synced folders gives two offsite
-        copies.</li>
-    </ul>
-    <p>
-      Local presence is not proof of a remote copy, since a file may be
-      unsynced or in conflict. SyncD and a sync client must also never both
-      write the same file, and the database itself stays out of synced folders.
+      The <a href="personal-system-of-record.html#storage-providers">design page</a>
+      describes the role of storage providers in more detail.
     </p>
 
     <h2>Planned: storing copies</h2>
     <p>
-      SyncD currently reads. A later stage is to let it store copies of your
-      data in places you choose, for example an atomic.place account, an
-      ELFA/NextGraph account, or your Dropbox. Each destination would be
-      recorded as a location, with a stated number of copies required before
-      any source is considered safe to remove.
+      SyncD currently keeps its archive on the laptop. A later stage is to
+      store copies in places you choose, such as an atomic.place account, an
+      ELFA/NextGraph account or your Dropbox, with a stated number of copies
+      required before any source is considered safe to remove.
     </p>
 
     <h2>Status</h2>
@@ -199,16 +199,16 @@
         <tr><th>Item</th><th>Status</th></tr>
       </thead>
       <tbody>
-        <tr><td>Sync of API collections with revisions, schemas and commit messages</td><td>Implemented, experimental</td></tr>
+        <tr><td>Generic import of API collections from composed descriptions</td><td>Implemented, experimental</td></tr>
         <tr><td>Connection through IAP or another integration-proxy instance</td><td>Implemented, experimental</td></tr>
+        <tr><td>Revisions with schemas and commit messages</td><td>Implemented, experimental</td></tr>
+        <tr><td>Incremental reads and change hints while offline</td><td>Implemented where the API supports them, experimental</td></tr>
         <tr><td>Offline browsing, folder checkout and Git export</td><td>Implemented, experimental</td></tr>
+        <tr><td>Braid listener and native Atomic drive</td><td>Experimental, read-only</td></tr>
+        <tr><td>Sending changes back to platforms</td><td>Experimental; live writes not yet verified</td></tr>
         <tr><td>File inventories for Dropbox, Google Drive and iCloud Drive</td><td>Implemented, experimental</td></tr>
-        <tr><td>Duplicate report across inventories</td><td>Implemented, experimental</td></tr>
-        <tr><td>Joining a local synced folder with the provider's API view</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
-        <tr><td>Locations, required copies and backend properties</td><td>Proposed (#727)</td></tr>
-        <tr><td>iCloud Photos</td><td>Not covered</td></tr>
+        <tr><td>Joining synced folders with provider APIs; required copies</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
         <tr><td>Storing copies at chosen destinations</td><td>Planned</td></tr>
-        <tr><td>Sending local edits back from the daemon</td><td>Not in the daemon; supported by the Syncables library where the API allows</td></tr>
       </tbody>
     </table>
     <footer aria-label="TUBS">🛁 🛁 🛁</footer>
