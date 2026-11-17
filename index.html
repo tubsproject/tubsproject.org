@@ -112,13 +112,14 @@
         to manage OAuth grants and API credentials and forward authorized requests.
         Ontola plans to offer integration-proxy as a SaaS product. The proxy handles
         connections; Syncables still builds the local data copy.</li>
-      <li><strong>Keep a versioned archive.</strong>
+      <li><strong>Keep an annotated, versioned archive.</strong>
         In SyncD, the standalone Syncables daemon, imported records are represented as
         Atomic Data resources in JSON-AD, with stable subjects, source identities and
         bundled class and property definitions. Original source JSON is retained alongside
-        that representation. PostgreSQL stores the records together with their history:
-        versions of the data, versions of the schemas, and a commit message on each
-        revision. This archive is the richest form of the data, and the hub that
+        that representation. PostgreSQL stores how both the data and the schemas
+        evolve: every version of the data and every version of a schema is kept, and
+        each change is annotated with a message saying what changed and why. This
+        annotated archive is the richest form of the data, and the hub that
         everything else is derived from.</li>
       <li><strong>Export to the stores you choose.</strong>
         Each export carries as much of the archive as the target can hold. Plain
@@ -153,9 +154,10 @@
     <p>
       Atomic Data has a special place here. It is the model SyncD works in,
       and Atomic Server is the store we want to export to without loss. Today
-      an Atomic drive keeps the data and its links to schemas, but not
-      versions of the data or the schemas, nor messages describing them. Until
-      it does, SyncD's archive remains the source of truth.
+      an Atomic drive keeps the data and its links to schemas, but not the
+      annotated evolution of either: no versions of the data or the schemas,
+      and no annotations explaining them. Until it does, SyncD's archive
+      remains the source of truth.
       <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Versioned Atomic Data</a>
       is the proposal to close that gap.
     </p>

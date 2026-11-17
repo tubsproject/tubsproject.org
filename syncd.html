@@ -24,8 +24,9 @@
     <p>
       SyncD is the standalone Syncables daemon. It runs on your own laptop,
       imports your data from the platforms you use, and keeps a local,
-      versioned archive of it: the records, the schemas that describe them,
-      and the history of both, with a commit message on every change. It is
+      annotated, versioned archive of it: the records, the schemas that
+      describe them, and the evolution of both, with every change annotated
+      to say what changed and why. It is
       the indexer for a <a href="personal-system-of-record.html">personal system of record</a>.
     </p>
     <p>
@@ -128,9 +129,9 @@
         revision interprets it with the schema as it was then.</li>
       <li><strong>The history,</strong> as revisions. Earlier states remain
         readable, including records that disappeared and came back.</li>
-      <li><strong>Commit messages,</strong> on every revision, covering
-        changes to data and schemas alike. SyncD writes what was synced and
-        how; you can add why:
+      <li><strong>Annotations,</strong> on every revision, covering changes
+        to data and schemas alike, as commit messages. SyncD writes what was
+        synced and how; you can add why:
         <pre><code>syncables sync --config config.json \
   --message "Snapshot before migrating to the new tracker"</code></pre></li>
     </ul>
@@ -144,8 +145,7 @@
     <h2 id="exports">Exports</h2>
     <p>
       The archive in PostgreSQL is the richest form of the data: records,
-      their schemas, the history of both, and a commit message on every
-      revision. Every other form is an export of it, and carries as much as the
+      their schemas, and the annotated evolution of both. Every other form is an export of it, and carries as much as the
       target can hold.
     </p>
     <table>
@@ -156,7 +156,7 @@
           <th>Links to schemas</th>
           <th>Data history</th>
           <th>Schema history</th>
-          <th>Commit messages</th>
+          <th>Annotations</th>
         </tr>
       </thead>
       <tbody>
@@ -197,8 +197,8 @@
     <p>
       Atomic Data is the model SyncD works in, so an Atomic drive is the
       export closest to the archive, and Atomic Server is where we would like
-      the archive itself to live. What it lacks are versions of data and
-      schemas, and messages describing them.
+      the archive itself to live. What it lacks is the annotated evolution of
+      data and schemas: their versions, and the annotations explaining them.
       <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Versioned Atomic Data</a>
       is the proposal to add them.
     </p>
@@ -258,11 +258,11 @@
       <tbody>
         <tr><td>Generic import of API collections from composed descriptions</td><td>Implemented, experimental</td></tr>
         <tr><td>Connection through IAP or another integration-proxy instance</td><td>Implemented, experimental</td></tr>
-        <tr><td>Revisions with schemas and commit messages</td><td>Implemented, experimental</td></tr>
+        <tr><td>Annotated revisions of data and schemas</td><td>Implemented, experimental</td></tr>
         <tr><td>Incremental reads and change hints while offline</td><td>Implemented where the API supports them, experimental</td></tr>
         <tr><td>Offline browsing, folder checkout and Git export</td><td>Implemented, experimental</td></tr>
         <tr><td>Braid feed and Atomic drive exports</td><td>Experimental, read-only</td></tr>
-        <tr><td>Versions and commit messages in Atomic Data</td><td>Proposed (Versioned Atomic Data)</td></tr>
+        <tr><td>Annotated versions of data and schemas in Atomic Data</td><td>Proposed (Versioned Atomic Data)</td></tr>
         <tr><td>Exports to plain files, remoteStorage, Solid, LWS, Perkeep, Nextcloud</td><td>Possible</td></tr>
         <tr><td>Sending changes back to platforms</td><td>Experimental; live writes not yet verified</td></tr>
         <tr><td>File inventories for Dropbox, Google Drive and iCloud Drive</td><td>Implemented, experimental</td></tr>
