@@ -248,42 +248,48 @@
 
     <h2 id="syncd">Setting one up with SyncD</h2>
     <p>
-      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">SyncD</a>,
-      the standalone Syncables daemon, is the indexer. Today it covers data
-      behind APIs. File indexing across storage providers is proposed in
-      <a href="https://github.com/ontola/atomic-plugins/issues/727">atomic-plugins #727</a>.
-      SyncD is experimental and unreleased, and the
-      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">daemon guide</a>
-      has the exact commands. The outline is:
+      <a href="syncd.html">SyncD</a>, the standalone Syncables daemon, is the
+      indexer. It runs on your laptop, imports data from many platforms through
+      an integration-proxy instance such as IAP, and keeps the data, its schemas
+      and their history with commit messages in a local database. It already
+      keeps inventories of the files you hold with Dropbox, Google Drive and
+      iCloud Drive, and it works alongside the providers' own sync clients.
     </p>
-    <ol>
-      <li><strong>Run it on a machine you control,</strong> with a local
-        PostgreSQL database that holds the archive and its history.</li>
-      <li><strong>Authorize each service.</strong> The daemon uses
-        <a href="https://github.com/ontola/atomic-plugins/tree/main/integration-proxy">integration-proxy</a>
-        for OAuth grants and device approval. Credentials are not written to
-        the configuration file or the database.</li>
-      <li><strong>Describe each collection</strong> in the configuration: the
-        service, the approved connection, the composed OpenAPI description
-        with its overlay, and how often to poll.</li>
-      <li><strong>Sync, and say why.</strong> Each successful read publishes a
-        revision with a commit message. Your own intent is recorded with it:
-        <pre><code>syncables sync --config config.json \
-  --message "First snapshot of my issue tracker"</code></pre></li>
-      <li><strong>Read from the views.</strong> Browse a collection or inspect
-        its history at a chosen revision. Each collection also appears as an
-        ordinary folder with one JSON file per record, and a history can be
-        exported to Git.</li>
-      <li><strong>Back up the database to two places.</strong> The original
-        API responses and the full revision history live only there.</li>
-      <li><strong>Add files.</strong> Until #727 is implemented, files can be
-        recorded with a small content-and-log tool: each file is stored or
-        referenced under its hash, and each batch gets a log entry with a message.</li>
-    </ol>
     <p>
-      Current limits: the standalone daemon reads and archives but does not
-      send edits back, each read is capped in size and duration, nothing is
-      pruned automatically, and saved login sessions are supported on macOS only.
+      The <a href="syncd.html">SyncD page</a> describes what it does today and
+      what is planned. The
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/syncables/docs/daemon.md">daemon guide</a>
+      has the exact commands.
+    </p>
+
+    <h2 id="plain-file-format">A plain-file form of the record</h2>
+    <p>
+      A database is a working store, not the permanent record. The record also
+      needs a form that can be read without the software that wrote it. The
+      proposed form is a directory of plain files:
+    </p>
+    <ul>
+      <li><strong>Content</strong> in files named by the SHA-256 of their bytes,
+        in subfolders named after the first two hexadecimal characters.</li>
+      <li><strong>Log entries</strong> as small JSON files, themselves named by
+        their hash. Each holds the hash of the previous entry, the hashes of
+        the content it concerns with provenance notes such as the original
+        path, and the commit message.</li>
+      <li><strong>One pointer</strong> to the newest entry, the only file that
+        is ever replaced.</li>
+    </ul>
+    <p>
+      Everything in it can be checked with standard tools: hash each file and
+      compare with its name, then follow the chain of entries. New files can
+      be bundled into one archive file per day for transport to a sync folder
+      or cold storage.
+    </p>
+    <p>
+      The plan is for SyncD to write this form as an export of its own history,
+      alongside its existing Git export, carrying the same commit messages. The
+      log stays SyncD's, so there is one layer of messages, and the directory is
+      a durable view of it. A small command-line prototype of the format exists;
+      it is not developed as a separate tool.
     </p>
 
     <h2>Structured data</h2>
@@ -346,10 +352,9 @@
       </thead>
       <tbody>
         <tr><td>SyncD: API sync into PostgreSQL with revisions and commit messages</td><td>Implemented, experimental</td></tr>
-        <tr><td>Content-and-log prototype for files (command-line script)</td><td>Prototype, not yet published</td></tr>
-        <tr><td>File index across storage providers in SyncD</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
-        <tr><td>Local scan source for macOS, covering iCloud</td><td>Proposed, part of #727</td></tr>
-        <tr><td>Local loose files with a daily archive file as transport</td><td>Planned experiment</td></tr>
+        <tr><td>File inventories in SyncD for Dropbox, Google Drive and iCloud Drive, with a duplicate report</td><td>Implemented, experimental</td></tr>
+        <tr><td>Locations, required copies, and joining synced folders with provider APIs</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
+        <tr><td>Plain-file export from SyncD, with a daily archive file as transport</td><td>Planned</td></tr>
         <tr><td>Revisions with commit messages in Atomic Server</td><td>Under discussion</td></tr>
         <tr><td>Which levels get a hash identity (value, atom, record)</td><td>Open</td></tr>
         <tr><td>Messaging between systems of record</td><td>Planned</td></tr>
@@ -417,6 +422,11 @@
       <dd>Providers' own clients keep handling capture and replication. For
         iCloud, which has no web API for listing, the index reads the local
         interfaces on a Mac.</dd>
+
+      <dt>2026-11-17: One log, owned by SyncD</dt>
+      <dd>A separate content-and-log tool beside SyncD would mean two logs with
+        two layers of commit messages. Its plain-file format is kept as a planned
+        export from SyncD instead.</dd>
 
       <dt>2026-11-16: The name</dt>
       <dd>"Personal system of record", shortened to "personal SoR" in running text.</dd>
