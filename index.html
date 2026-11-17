@@ -112,14 +112,20 @@
         to manage OAuth grants and API credentials and forward authorized requests.
         Ontola plans to offer integration-proxy as a SaaS product. The proxy handles
         connections; Syncables still builds the local data copy.</li>
-      <li><strong>Store the data as Atomic Data.</strong>
+      <li><strong>Keep a versioned archive.</strong>
         In SyncD, the standalone Syncables daemon, imported records are represented as
-        <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Atomic Data</a>
-        resources in JSON-AD, with stable subjects, source identities and bundled
-        class and property definitions. Original source JSON is retained alongside
-        that representation. PostgreSQL stores the local records and their snapshot
-        history, so data and its accompanying schema resources can be read at a
-        specific revision.</li>
+        Atomic Data resources in JSON-AD, with stable subjects, source identities and
+        bundled class and property definitions. Original source JSON is retained alongside
+        that representation. PostgreSQL stores the records together with their history:
+        versions of the data, versions of the schemas, and a commit message on each
+        revision. This archive is the richest form of the data, and the hub that
+        everything else is derived from.</li>
+      <li><strong>Export to the stores you choose.</strong>
+        Each export carries as much of the archive as the target can hold. Plain
+        folders, Git repositories, a read-only Braid feed and a native Atomic drive
+        exist today; personal data store protocols such as remoteStorage, Solid and
+        LWS, Perkeep and Nextcloud are possible further targets. The
+        <a href="syncd.html#exports">SyncD page</a> lists what each export keeps.</li>
     </ol>
     <h2>SyncD: a local, versioned archive</h2>
     <p>
@@ -143,6 +149,15 @@
       SyncD runs on your laptop, connects through IAP or another
       integration-proxy instance, and can also keep inventories of the files
       you hold with storage providers. See the <a href="syncd.html">SyncD page</a>.
+    </p>
+    <p>
+      Atomic Data has a special place here. It is the model SyncD works in,
+      and Atomic Server is the store we want to export to without loss. Today
+      an Atomic drive keeps the data and its links to schemas, but not
+      versions of the data or the schemas, nor messages describing them. Until
+      it does, SyncD's archive remains the source of truth.
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Versioned Atomic Data</a>
+      is the proposal to close that gap.
     </p>
     <h2>A personal system of record</h2>
     <p>

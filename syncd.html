@@ -136,21 +136,78 @@
     </ul>
 
     <h2>Using the data</h2>
+    <p>
+      The archive can be browsed offline, from the command line or a local
+      browser interface, at the current revision or any earlier one.
+    </p>
+
+    <h2 id="exports">Exports</h2>
+    <p>
+      The archive in PostgreSQL is the richest form of the data: records,
+      their schemas, the history of both, and a commit message on every
+      revision. Every other form is an export of it, and carries as much as the
+      target can hold.
+    </p>
+    <table>
+      <thead>
+        <tr>
+          <th>Export</th>
+          <th>Records</th>
+          <th>Links to schemas</th>
+          <th>Data history</th>
+          <th>Schema history</th>
+          <th>Commit messages</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Archive (PostgreSQL)</td>
+          <td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td>
+        </tr>
+        <tr>
+          <td>Git repository</td>
+          <td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td><td>Yes</td>
+        </tr>
+        <tr>
+          <td>Braid feed (read-only)</td>
+          <td>Yes</td><td>Yes</td><td>Recent revisions, and new ones as they appear</td><td>As part of each revision</td><td>No</td>
+        </tr>
+        <tr>
+          <td>Plain folders</td>
+          <td>Yes</td><td>Yes</td><td>No, current revision only</td><td>No</td><td>No</td>
+        </tr>
+        <tr>
+          <td>Atomic drive</td>
+          <td>Yes</td><td>Yes, as native classes and properties</td><td>No; each record keeps its own edit state from the time of export</td><td>No</td><td>No</td>
+        </tr>
+      </tbody>
+    </table>
     <ul>
-      <li><strong>Browse offline,</strong> from the command line or a local
-        browser interface, at the current revision or any earlier one.</li>
-      <li><strong>Plain folders:</strong> each collection can be checked out
-        as a folder with one JSON file per record.</li>
-      <li><strong>Git:</strong> the history of a collection or a single record
-        can be exported as a Git repository, with its messages and branches.</li>
-      <li><strong>Braid:</strong> an experimental read-only listener serves
-        snapshots over Braid-HTTP, so a client can subscribe and receive each
-        new revision as it is published.</li>
-      <li><strong>A native Atomic drive:</strong> an experimental projection
-        presents the synced collections as one Atomic drive, with a table per
-        collection and the schemas as native classes and properties. Atomic
-        clients and servers can replicate it.</li>
+      <li><strong>Git</strong> exports the history of a collection or a single
+        record, with its messages and branches.</li>
+      <li><strong>Braid</strong> serves a collection over Braid-HTTP. A client
+        subscribes and receives each new revision as it is published.</li>
+      <li><strong>Plain folders</strong> hold one JSON file per record, with
+        the schemas alongside.</li>
+      <li><strong>The Atomic drive</strong> presents the synced collections as
+        one drive, with a table per collection, which Atomic clients and
+        servers can replicate. Each record notes the archive revision it came
+        from.</li>
     </ul>
+    <p>
+      Atomic Data is the model SyncD works in, so an Atomic drive is the
+      export closest to the archive, and Atomic Server is where we would like
+      the archive itself to live. What it lacks are versions of data and
+      schemas, and messages describing them.
+      <a href="https://github.com/ontola/atomic-plugins/blob/main/docs/design/versioned-atomic-data.md">Versioned Atomic Data</a>
+      is the proposal to add them.
+    </p>
+    <p>
+      Possible further targets include a plain-file form of the archive (see
+      the <a href="personal-system-of-record.html#plain-file-format">design page</a>),
+      personal data store protocols such as remoteStorage, Solid and LWS,
+      Perkeep and Nextcloud. What each of them can keep is still to be assessed.
+    </p>
 
     <h2>Sending changes back</h2>
     <p>
@@ -204,7 +261,9 @@
         <tr><td>Revisions with schemas and commit messages</td><td>Implemented, experimental</td></tr>
         <tr><td>Incremental reads and change hints while offline</td><td>Implemented where the API supports them, experimental</td></tr>
         <tr><td>Offline browsing, folder checkout and Git export</td><td>Implemented, experimental</td></tr>
-        <tr><td>Braid listener and native Atomic drive</td><td>Experimental, read-only</td></tr>
+        <tr><td>Braid feed and Atomic drive exports</td><td>Experimental, read-only</td></tr>
+        <tr><td>Versions and commit messages in Atomic Data</td><td>Proposed (Versioned Atomic Data)</td></tr>
+        <tr><td>Exports to plain files, remoteStorage, Solid, LWS, Perkeep, Nextcloud</td><td>Possible</td></tr>
         <tr><td>Sending changes back to platforms</td><td>Experimental; live writes not yet verified</td></tr>
         <tr><td>File inventories for Dropbox, Google Drive and iCloud Drive</td><td>Implemented, experimental</td></tr>
         <tr><td>Joining synced folders with provider APIs; required copies</td><td>Proposed (<a href="https://github.com/ontola/atomic-plugins/issues/727">#727</a>)</td></tr>
