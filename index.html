@@ -135,9 +135,9 @@
       PostgreSQL holds the archive and its history; working folders expose the
       local data, and optional Git exports make collection or item histories
       available to repository tools. SyncD retains source JSON alongside the
-      Atomic Data representation. The current standalone daemon reads and
-      archives provider data; sending local edits back is supported separately
-      by the Syncables library where the API and its description allow it.
+      Atomic Data representation. Sending local changes back to a platform is
+      experimental, and limited to operations the API description declares
+      precisely enough.
     </p>
     <p>
       SyncD runs on your laptop, connects through IAP or another
