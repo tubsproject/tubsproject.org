@@ -60,9 +60,11 @@
       <li><strong>Indexes and views are disposable.</strong>
         Any folder layout, database or application view can be deleted and
         rebuilt from the content and the log.</li>
-      <li><strong>One log, with commit messages.</strong>
-        Every change to data or to schemas is an entry with a free-form message
-        saying what happened and why. There is one layer of messages, not one per tool.</li>
+      <li><strong>An annotated history of data and schemas.</strong>
+        Both the data and the schemas evolve, and both evolutions are kept.
+        Every change to either is an entry in one log, annotated with a
+        free-form message saying what happened and why. There is one layer of
+        annotations, not one per tool.</li>
       <li><strong>Files stay where they are.</strong>
         Existing folders on existing storage are indexed in place. Nothing has
         to be moved or renamed before the system is useful.</li>
